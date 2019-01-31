@@ -74,14 +74,14 @@ def main_full_run_driz(input_files, final_bits, driz_sep_bits, driz_cr_corr,
 	os.chdir(start_dir)
 if __name__ == '__main__':
 
-	input_dirs = glob.glob('/Users/cshanahan/Desktop/WD_acs/data/cmd_p9/*/')
+	input_dirs = glob.glob('/Users/cshanahan/Desktop/WD_acs/data/cmd_p9/F625W/')
 
 	for d in input_dirs:
 		input_files = glob.glob(d + '*flc.fits') #must be all from same visit/filter
 
 		### set params
-		final_bits = 16 + 64 + 256
-		driz_sep_bits = 16 + 64 + 256
+		final_bits = 16 + 64 + 256 + 1024
+		driz_sep_bits = 16 + 64 + 256 + 1024
 		driz_cr_corr = True
 		driz_cr_grow = 1
 		driz_cr_scale = '2.0 1.5'
