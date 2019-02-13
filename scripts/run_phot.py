@@ -14,20 +14,21 @@ from ginga.util import zscale
 import numpy as np
 import matplotlib.pyplot as plt
 from photutils import CircularAnnulus, CircularAperture, RectangularAperture
-from photutils import aperture_photometry, detect_sources, source_properties
+from photutils import aperture_photometry,  deblend_sources, detect_sources, detect_threshold, source_properties
 from wfc3_photometry import photometry_tools
 
 def detect_sources_segm(data, threshold):
 	"""Use segmentation map to detect sources in image."""
 
-	sigma = 1.8 * gaussian_fwhm_to_sigma
+	sigma = 2 * gaussian_fwhm_to_sigma
 	kernel = Gaussian2DKernel(sigma, x_size=3, y_size=3)
 	kernel.normalize()
+	threshold = detect_threshold(data, 1.5)
 	segm = detect_sources(data, threshold=threshold, npixels=75, filter_kernel=kernel)
 	segm_cat = source_properties(data, segm).to_table()
 	return segm_cat
 
-def filter_bad_sources(ctx, xpos, ypos, n_exp_min, n_exp_tot):
+def _filter_bad_sources(ctx, xpos, ypos, n_exp_min, n_exp_tot):
 	"""Filters out sources that fall in areas of low coverage. Uses the context
 	   image to create an image that shows, pixel wise, the number of images
 	   that went into that pixel. For each source, the average number of images
@@ -43,7 +44,7 @@ def filter_bad_sources(ctx, xpos, ypos, n_exp_min, n_exp_tot):
 	for i, xx in enumerate(xpos):
 		yy = ypos[i]
 		xx, yy = xx.value, yy.value
-		ap = RectangularAperture((xx, yy), w=5, h=5.)
+		ap = RectangularAperture((xx, yy), w=200, h=200.)
 		ap_phot = aperture_photometry(nimages_array, ap)
 		summ = ap_phot['aperture_sum'][0]
 		if summ/ap.area() > n_exp_min:
@@ -51,6 +52,28 @@ def filter_bad_sources(ctx, xpos, ypos, n_exp_min, n_exp_tot):
 		else:
 			bad_detection_flags.append(0)
 	return bad_detection_flags
+
+def filter_bad_sources(ctx_img, xpos, ypos, frac_cover_min, n_exp_total):
+
+	#boolean array indicating if that pixel is covered by ANY image.
+	coverage_arr = np.nan_to_num(ctx_img).astype(bool).astype(int)
+	plt.imshow(coverage_arr)
+	plt.savefig('hehe.png')
+	plt.close()
+
+	low_coverage_flags = []
+
+	for i, xx in enumerate(xpos):
+		xx, yy = xx.value, ypos[i].value
+		ap = RectangularAperture((xx, yy), w=100, h=100)
+		ap_phot = aperture_photometry(coverage_arr, ap)
+		summ = ap_phot['aperture_sum'][0]
+		if summ/ap.area() > frac_cover_min:
+			low_coverage_flags.append(1)
+		else:
+			low_coverage_flags.append(0)
+
+	return low_coverage_flags
 
 def output_detected_sources_plot(data, source_catalog, save=True,
 								 output_file_path=None, show=False):
@@ -65,6 +88,7 @@ def output_detected_sources_plot(data, source_catalog, save=True,
 		plt.savefig(output_file_path)
 	if show:
 		plt.show()
+	plt.close()
 
 def write_source_catalog(source_catalog, output_file_path):
 	"""Writes catalog of output sources as csv for use with ds9."""
@@ -72,7 +96,7 @@ def write_source_catalog(source_catalog, output_file_path):
 	with open(output_file_path, 'w') as f:
 		f.write('x, y\n')
 		for i, val in enumerate(source_catalog):
-			f.write(str(source_catalog['xcentroid'][i])+', '+str(source_catalog['ycentroid'][i])+'\n')
+			f.write(str(source_catalog['xcentroid'][i].value)+', '+str(source_catalog['ycentroid'][i].value)+'\n')
 
 def circular_aperture_photometry(data, source_catalog, r_ap, r_in_sky, r_out_sky):
 	"""Aperture photometry with circular aperture of radius r. Aperture sums
@@ -116,12 +140,11 @@ def main_run_phot(input_file, show_plots = False, save_plots = True):
 
 	#run source detection
 	threshold = np.percentile(data[~np.isnan(data)], 99)
-	print(os.path.basename(input_file), threshold)
 	source_catalog = detect_sources_segm(data, threshold)
 
 	#filter bad souces
 	n_exp_tot = hd0['ndrizim']
-	n_exp_min = 0.80
+	n_exp_min = 0.98
 
 	bad_sources = filter_bad_sources(ctx, source_catalog['xcentroid'],
 		source_catalog['ycentroid'], n_exp_min,
@@ -144,7 +167,7 @@ def main_run_phot(input_file, show_plots = False, save_plots = True):
 	ascii.write(photcat, output_basepath+'_photcat.dat', overwrite = True)
 
 if __name__ == '__main__':
-	input_files = glob.glob('/Users/cshanahan/Desktop/clean_desktop/WD_acs/data/*/*/*drc.fits')
+	input_files = glob.glob('/Users/cshanahan/Desktop/clean_desktop/WD_acs/data/dgq_08/*/*drc.fits')
 	for f in input_files:
 		main_run_phot(f)
 	# p = Pool(8)
