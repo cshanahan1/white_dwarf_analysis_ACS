@@ -1,4 +1,4 @@
-This repository contains scripts to process ACS parallel fields (drc.fits) files and make photometry catalogs of both point and extended sources in the fields. The following outlines what is done to produce the final photometry catalogs and what they contain. 
+This repository contains scripts to process ACS parallel fields (drc.fits) files and make photometry catalogs of both point and extended sources in the fields. The following outlines what is done to produce the final photometry catalogs and what they contain. Additionally, all these catalogs (with names denoting program/visit/filter) are hosted here as well.
 
 1. (sort_data_visit_filter.py) Data (drc files) are sorted in subdirectories based on program/visit and then again by filter. The program/visit ID is taken from the file name. 
 
