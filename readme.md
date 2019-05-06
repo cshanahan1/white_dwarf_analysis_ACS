@@ -34,5 +34,6 @@ The final processing step - to take these catalogs with countrates and subtract 
 
 Email me (cshanahan@stsci.edu) if you have any questions!
 
+*There is also a script run_driz.py that I wrote to re-drizzle the data but it looks like the pipeline products do well enough. I left this here for future use. 
 
 
